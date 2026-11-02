@@ -238,8 +238,16 @@ def create_app(data_dir: Optional[str] = None) -> Flask:
         session.pop("admin_logged_in", None)
         return jsonify({"success": True})
 
+    @app.after_request
+    def disable_api_cache(response):
+        if request.path.startswith("/api/"):
+            response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+            response.headers["Pragma"] = "no-cache"
+        return response
+
     @app.route("/api/admin/overview", methods=["GET"])
     def admin_overview():
+        storage._sync_config()
         admin_pw = (os.environ.get("FANTA_ADMIN_PASSWORD") or storage.config.get("admin_password") or "").strip()
         if admin_pw and not is_admin_authenticated():
             return jsonify({
@@ -276,7 +284,11 @@ def create_app(data_dir: Optional[str] = None) -> Flask:
         bucket = data.get("bucket", "default")
         custom_key = data.get("custom_key")
         created = storage.create_api_key(name=name, bucket=bucket, custom_key=custom_key)
-        return jsonify({"success": True, "api_key": created})
+        return jsonify({
+            "success": True,
+            "api_key": created,
+            "api_keys": storage.list_api_keys()
+        })
 
     @app.route("/api/admin/keys", methods=["DELETE"])
     @require_admin
@@ -284,12 +296,13 @@ def create_app(data_dir: Optional[str] = None) -> Flask:
         data = request.get_json() or {}
         key = data.get("key", "")
         if storage.delete_api_key(key):
-            return jsonify({"success": True})
+            return jsonify({"success": True, "api_keys": storage.list_api_keys()})
         return jsonify({"success": False, "error": "Key not found"}), 404
 
     @app.route("/api/admin/settings", methods=["POST"])
     @require_admin
     def admin_save_settings():
+        storage._sync_config()
         data = request.get_json() or {}
         if "server_name" in data and data["server_name"].strip():
             storage.config["server_name"] = data["server_name"].strip()

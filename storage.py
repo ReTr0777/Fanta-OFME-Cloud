@@ -60,10 +60,16 @@ class SaveStorageManager:
 
     def save_config(self) -> None:
         try:
-            with open(self.config_path, "w", encoding="utf-8") as f:
+            temp_cfg = self.config_path + ".tmp"
+            with open(temp_cfg, "w", encoding="utf-8") as f:
                 json.dump(self.config, f, indent=4)
+            os.replace(temp_cfg, self.config_path)
         except Exception as e:
             print(f"[Storage] Error saving config: {e}", flush=True)
+
+    def _sync_config(self) -> None:
+        """Reloads server_config.json from disk so multiple Gunicorn workers stay in sync."""
+        self.config = self._load_config()
 
     @staticmethod
     def sanitize_name(name: str) -> str:
@@ -82,6 +88,7 @@ class SaveStorageManager:
         1. FANTA_REQUIRE_AUTH is true / enabled in config, OR
         2. At least one API key has been configured (via FANTA_API_KEY env or dashboard).
         """
+        self._sync_config()
         if self.config.get("require_auth"):
             return True
         return len(self.config.get("api_keys", {})) > 0
@@ -91,6 +98,7 @@ class SaveStorageManager:
         Validates an API key and returns (is_authorized, bucket_name, key_label).
         If no keys are configured and require_auth is False, allows access to 'default' bucket.
         """
+        self._sync_config()
         key = (provided_key or "").strip()
         api_keys = self.config.get("api_keys", {})
 
@@ -110,6 +118,7 @@ class SaveStorageManager:
         return False, "default", None
 
     def create_api_key(self, name: str, bucket: str = "default", custom_key: Optional[str] = None) -> Dict[str, Any]:
+        self._sync_config()
         clean_name = (name or "New Client").strip()
         clean_bucket = self.sanitize_bucket(bucket)
         token = (custom_key or "").strip() or f"fanta_{secrets.token_urlsafe(24)}"
@@ -127,6 +136,7 @@ class SaveStorageManager:
         return {"key": token, **key_obj}
 
     def delete_api_key(self, token: str) -> bool:
+        self._sync_config()
         keys = self.config.get("api_keys", {})
         if token in keys:
             del keys[token]
@@ -135,6 +145,7 @@ class SaveStorageManager:
         return False
 
     def list_api_keys(self) -> List[Dict[str, Any]]:
+        self._sync_config()
         result = []
         for k, v in self.config.get("api_keys", {}).items():
             masked = k[:9] + "..." + k[-4:] if len(k) > 14 else "***"
@@ -149,6 +160,7 @@ class SaveStorageManager:
         return result
 
     def list_buckets(self) -> List[str]:
+        self._sync_config()
         buckets = {"default"}
         if os.path.isdir(self.saves_root):
             for entry in os.listdir(self.saves_root):
