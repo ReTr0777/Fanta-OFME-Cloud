@@ -4,7 +4,7 @@ services:
     container_name: fanta-ofme-cloud
     restart: unless-stopped
     ports:
-      - "${FANTA_PORT:-8080}:8080"
+      - "${FANTA_PORT:-27845}:27845"
     environment:
       - FANTA_SERVER_NAME=${FANTA_SERVER_NAME:-Fanta-OFME-Cloud}
       - FANTA_API_KEY=${FANTA_API_KEY:-}

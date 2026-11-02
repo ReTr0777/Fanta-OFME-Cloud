@@ -317,7 +317,7 @@ app = create_app()
 
 if __name__ == "__main__":
     host = os.environ.get("FANTA_HOST", "0.0.0.0")
-    port = int(os.environ.get("FANTA_PORT", "8080"))
+    port = int(os.environ.get("FANTA_PORT", "27845"))
     debug = os.environ.get("FANTA_DEBUG", "false").lower() in ("1", "true", "yes")
     print(f"============================================================")
     print(f"  Fanta-OFME-Cloud v{APP_VERSION} running on http://{host}:{port}")
