@@ -18,6 +18,7 @@ from flask import (
     render_template,
     session
 )
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 try:
     from dotenv import load_dotenv
@@ -47,6 +48,7 @@ def extract_api_key() -> Optional[str]:
 
 def create_app(data_dir: Optional[str] = None) -> Flask:
     app = Flask(__name__, template_folder="templates")
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
     app.secret_key = os.environ.get("FANTA_SECRET_KEY", "fanta-ofme-cloud-secret-key-2026")
     app.config["MAX_CONTENT_LENGTH"] = int(os.environ.get("FANTA_MAX_UPLOAD_MB", "512")) * 1024 * 1024
 
