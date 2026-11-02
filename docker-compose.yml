@@ -1,0 +1,17 @@
+services:
+  fanta-ofme-cloud:
+    build: .
+    container_name: fanta-ofme-cloud
+    restart: unless-stopped
+    ports:
+      - "${FANTA_PORT:-8080}:8080"
+    environment:
+      - FANTA_SERVER_NAME=${FANTA_SERVER_NAME:-Fanta-OFME-Cloud}
+      - FANTA_API_KEY=${FANTA_API_KEY:-}
+      - FANTA_ADMIN_PASSWORD=${FANTA_ADMIN_PASSWORD:-}
+      - FANTA_REQUIRE_AUTH=${FANTA_REQUIRE_AUTH:-false}
+      - FANTA_MAX_HISTORY=${FANTA_MAX_HISTORY:-5}
+      - FANTA_MAX_UPLOAD_MB=${FANTA_MAX_UPLOAD_MB:-512}
+    volumes:
+      - ./data:/app/data
+
